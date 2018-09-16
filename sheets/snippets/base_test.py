@@ -15,6 +15,7 @@
 from __future__ import print_function
 import unittest
 import sys
+from oauth2client import file, client, tools
 from oauth2client.client import GoogleCredentials
 from googleapiclient import errors
 from googleapiclient.discovery import build
@@ -34,13 +35,28 @@ class BaseTest(unittest.TestCase):
 
     @classmethod
     def tearDownClass(cls):
-        # Restore STDOUT.
+        # Restore STDOUT
         sys.stdout = cls.stdout
 
     @classmethod
     def create_credentials(cls):
-        cls.credentials = GoogleCredentials.get_application_default()
+        store = file.Storage('token.json')
+        creds = store.get()
         scope = ['https://www.googleapis.com/auth/drive']
+        if not creds or creds.invalid:
+            flow = client.flow_from_clientsecrets('credentials.json', scope)
+            creds = tools.run_flow(flow, store)
+
+        cls.credentials = GoogleCredentials(
+            creds.access_token,
+            creds.client_id,
+            creds.client_secret,
+            creds.refresh_token,
+            creds.token_expiry,
+            creds.token_uri,
+            creds.user_agent,
+            revoke_uri=creds.revoke_uri,)
+
         return cls.credentials.create_scoped(scope)
 
     def setUp(self):
